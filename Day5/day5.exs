@@ -17,7 +17,7 @@ defmodule Helpers do
 
   def update_points(point, all_points), do: Map.update(all_points, point, 1, fn x -> x + 1 end)
 
-  def update_point_map(list, map) when length(list) == 0, do: map
+  def update_point_map(list, map) list == [], do: map
   def update_point_map([current_list | rest], point_map), do: update_point_map(rest, Enum.reduce(current_list, point_map, &update_points/2))
 
   def overlapping_points(x), do: x > 1
