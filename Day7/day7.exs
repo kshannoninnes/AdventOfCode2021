@@ -15,13 +15,11 @@ defmodule Part1 do
   """
   import Helpers
 
-  def step_one(x, target), do: abs(x - target)
-
   def solve(file_path) do
     input = file_path |> get_input |> Enum.sort
     median = Enum.at(input, (length(input) / 2) |> ceil)
 
-    Enum.reduce(input, 0, fn x, acc -> step_one(x, median) + acc end)
+    Enum.reduce(input, 0, fn x, acc -> abs(median - x) + acc end)
   end
 end
 
@@ -34,14 +32,17 @@ defmodule Part2 do
   """
   import Helpers
 
-  def step_exp(x, target), do: 0..abs(x - target) |> Enum.sum
+  def guass_summation(x), do: x * (x + 1) / 2
 
   def solve(file_path) do
     input = file_path |> get_input
     mean = Enum.sum(input) / length(input)
+    lower_bound = mean |> floor
+    upper_bound = mean |> ceil
 
     min(
-    Enum.reduce(input, 0, fn x, acc -> step_exp(x, mean |> ceil) + acc end),
-    Enum.reduce(input, 0, fn x, acc -> step_exp(x, mean |> floor) + acc end))
+      Enum.reduce(input, 0, fn x, acc -> guass_summation(abs(upper_bound - x)) + acc end),
+      Enum.reduce(input, 0, fn x, acc -> guass_summation(abs(lower_bound - x)) + acc end)
+    ) |> trunc
   end
 end
