@@ -26,7 +26,6 @@ defmodule Part2 do
 
   defp num_common_segments(first, second) do
     String.graphemes(first)
-    |> Enum.uniq
     |> Enum.count(&Enum.member?(String.graphemes(second), &1))
   end
 
