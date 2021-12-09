@@ -56,7 +56,6 @@ defmodule Part2 do
   def solve(file_path) do
     file_path
     |> get_input
-    |> Enum.map(&decode_output/1)
-    |> Enum.sum
+    |> Enum.reduce(0, fn x, acc -> decode_output(x) + acc end)
   end
 end
