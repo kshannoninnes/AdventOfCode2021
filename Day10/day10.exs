@@ -46,7 +46,7 @@ defmodule Part2 do
   end
 
   def solve(file_path) do
-    autocomplete_scores = Enum.map(get_input(file_path), &determine_incomplete/1)
+    autocomplete_scores = Enum.map(get_input(file_path), &categorize_nav_subsystems/1)
     |> Enum.filter(&match?({:incomp, _}, &1))
     |> Enum.map(fn {_, incomplete} -> calc_scores(incomplete) end)
     |> Enum.sort
