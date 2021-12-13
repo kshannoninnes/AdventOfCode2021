@@ -5,6 +5,10 @@ defmodule Helpers do
     |> Enum.map(&String.graphemes/1)
   end
 
+  def categorize_nav_subsystems(nav_subsystem) do
+    Enum.reduce_while(nav_subsystem, {nil, []}, fn char, {_, stack} -> is_valid_syntax(char, stack) end)
+  end
+
   def is_valid_syntax(char, stack = []), do: {:cont, {:incomp, [char | stack]}}
   def is_valid_syntax(char, stack = [popped | rest]) do
     cond do
@@ -23,12 +27,8 @@ defmodule Part1 do
 
   def get_char_score(char), do: Map.get(%{")" => 3, "]" => 57, "}" => 1197, ">" => 25137}, char)
 
-  def determine_corruption(nav_line) do
-    Enum.reduce_while(nav_line, {nil, []}, fn char, {_, stack} -> is_valid_syntax(char, stack) end)
-  end
-
   def solve(file_path) do
-    Enum.map(get_input(file_path), fn x -> determine_corruption(x) end)
+    Enum.map(get_input(file_path), &categorize_nav_subsystems/1)
     |> Enum.filter(&match?({:corrupt, _}, &1))
     |> Enum.map(fn {_, char} -> get_char_score(char) end)
     |> Enum.sum
@@ -43,10 +43,6 @@ defmodule Part2 do
   def calc_scores(incomplete) do
     Enum.map(incomplete, &get_char_score(get_close_char(&1)))
     |> Enum.reduce(0, fn char_score, total -> (total * 5) + char_score end)
-  end
-
-  def determine_incomplete(nav_line) do
-    Enum.reduce_while(nav_line, {"", []}, fn char, {_, stack} -> is_valid_syntax(char, stack) end)
   end
 
   def solve(file_path) do
