@@ -1,65 +1,64 @@
-# Starting to approach the point where it's too much work to minimize my code for an AOC problem...
 defmodule Helpers do
-  def simulate(file_path, steps_remaining, in_sync \\ false) do
-    board = file_path |> get_input
 
-    Enum.reduce_while(1..steps_remaining, {board, 0}, fn step, {updated, count} ->
-        updated = incr_board(updated)
-        {updated, flashes} = process_nodes(updated, Map.new)
-        updated = reset_flashes(updated, flashes)
-
-        if(in_sync && map_size(flashes) == 100) do
-          {:halt, {updated, step}}
-        else
-          {:cont, {updated, count + map_size(flashes)}}
-        end
-    end) |> then(fn {_, total} -> total end)
-  end
-
-  defp get_input(file_path) do
+  def get_input(file_path) do
     file_path
     |> File.read!
-    |> String.split
-    |> Enum.map(&to_integer_map/1)
-    |> Enum.with_index
-    |> Map.new(fn {k, v} -> {v, k} end)
-  end
-
-  defp incr_board(board) do
-    Map.new(board, fn {row, submap} ->
-      {row, Map.new(submap, fn {col, energy} ->
-        {col, energy + 1}
-      end)}
+    |> String.replace("\n", "")
+    |> String.graphemes
+    |> Enum.map(&String.to_integer/1)
+    |> Enum.reduce({Map.new, 0}, fn num, {map, idx} ->
+      {Map.put_new(map, {div(idx, 10), rem(idx, 10)}, num), idx + 1}
     end)
+    |> elem(0)
   end
 
-  defp process_nodes(board, map) do
-    updated_map = collect_flashing_nodes(board, map)
-    updated_board = update_flashing_neighbours(board, updated_map)
-    processed_map = Map.new(updated_map, fn {node, _} -> {node, true} end)
+  def simulate_steps(board, total_steps, total_flashes \\ 0) do
+    total_steps = total_steps - 1 # Using negatives lets us infinite loop for part 2
+    board = Map.new(board, fn {{row, col}, num} -> {{row, col}, num + 1} end)
+    {board, high_energy} = process_energy_levels(board, Map.new)
+    board = reset_high_nodes(board)
+    new_flashes = map_size(high_energy)
 
-    if board == updated_board do
-      {board, processed_map}
-    else
-      process_nodes(updated_board, processed_map)
+    cond do
+      total_steps == 0    -> total_flashes + new_flashes
+      new_flashes == 100  -> abs(total_steps)
+      true                -> simulate_steps(board, total_steps, total_flashes + new_flashes)
     end
   end
 
-  defp reset_flashes(board, flashes) do
-    Enum.reduce(flashes, board, fn {{row, col}, _}, updated ->
-      update_in(updated[row][col], fn _ -> 0 end)
+  def process_energy_levels(board, high_energy) do
+    new_high_energy = get_high_energy(board, high_energy)
+    board = incr_high_energy_neighbours(board, new_high_energy)
+    new_high_energy = Map.new(new_high_energy, fn {xy, _} -> {xy, true} end)
+
+    case new_high_energy != high_energy do # Have we gained new high energy nodes?
+      false -> {board, new_high_energy}
+      true  -> process_energy_levels(board, new_high_energy)
+    end
+  end
+
+  defp reset_high_nodes(board) do
+    Map.new(board, fn
+      {xy, val} when val > 9  -> {xy, 0}
+      node                    -> node
     end)
   end
 
-  defp to_integer_map(row) do
-    row
-    |> String.graphemes
-    |> Enum.map(&String.to_integer/1)
-    |> Enum.with_index
-    |> Map.new(fn {k, v} -> {v, k} end)
+  def get_high_energy(board, flash_map) do
+    Enum.reduce(board, flash_map, fn
+        {xy, val}, acc when val > 9 -> Map.put_new(acc, xy, false)
+        _, acc                      -> acc
+      end)
   end
 
-  defp incr_neighbours(board, row, col) do
+  defp incr_high_energy_neighbours(board, map) do
+    for {coords, false} <- map,
+    reduce: board do new_board ->
+      incr_neighbours(new_board, coords)
+    end
+  end
+
+  defp incr_neighbours(board, {row, col}) do
     for x <- (col - 1)..(col + 1), y <- (row - 1)..(row + 1),
         (x != col or y != row),
         reduce: board
@@ -68,48 +67,24 @@ defmodule Helpers do
         end
   end
 
-  defp incr_node(board, row, col) do
-    if within_bounds?(row, col, map_size(board)) do
-      update_in(board[row][col], fn x -> x + 1 end)
-    else
-      board
-    end
-  end
-
-  defp within_bounds?(row, col, max), do: (row >= 0 and col >= 0) and (row < max and col < max)
-
-  defp collect_flashing_nodes(board, flashing_nodes) do
-    Enum.reduce(board, flashing_nodes, fn {y, row}, updated ->
-      Enum.reduce(row, updated, fn {x, node}, acc ->
-        if node == nil or node <= 9 do acc
-        else Map.put_new(acc, {y, x}, false) end
-      end)
-    end)
-  end
-
-  defp update_flashing_neighbours(board, map) do
-    Enum.reduce(map, board, fn {{row, col}, processed}, new_board ->
-      case processed do
-        false -> incr_neighbours(new_board, row, col)
-        true -> new_board
-      end
-    end)
-  end
-
+  defguard in_range(min, val, max) when min <= val and val <= max
+  def incr_node(board, row, _) when not in_range(0, row, 9), do: board
+  def incr_node(board, _, col) when not in_range(0, col, 9), do: board
+  def incr_node(board, row, col), do: Map.update!(board, {row, col}, fn x -> x + 1 end)
 end
 
 defmodule Part1 do
   import Helpers
 
-  def solve(file_path, num_steps) do
-    simulate(file_path, num_steps)
+  def solve(file_path, max_steps) do
+    file_path |> get_input |> simulate_steps(max_steps)
   end
 end
 
 defmodule Part2 do
   import Helpers
 
-  def solve(file_path, num_steps) do
-    simulate(file_path, num_steps, true)
+  def solve(file_path) do
+    file_path |> get_input |> simulate_steps(0)
   end
 end
