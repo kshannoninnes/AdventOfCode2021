@@ -56,7 +56,7 @@ defmodule Helpers do
   end
 
   # Graph Operations
-  def build_graph(vertices) do
+  defp build_graph(vertices) do
     for v <- vertices, reduce: Graph.new(vertex_identifier: &(&1))
     do g -> Graph.add_edges(g, get_edges(v, vertices)) end
   end
@@ -70,7 +70,7 @@ defmodule Helpers do
     ] |> Enum.filter(fn {_, _, [weight: w]} -> w != nil end)
   end
 
-  def sum_shortest_path(graph, max_idx) do
+  defp sum_shortest_path(graph, max_idx) do
     sp = Graph.dijkstra(graph, {0, 0}, {max_idx, max_idx})
     for [v1, v2] <- Enum.chunk_every(sp, 2, 1, :discard), reduce: 0
     do total -> total + Graph.edge(graph, v1, v2).weight end
